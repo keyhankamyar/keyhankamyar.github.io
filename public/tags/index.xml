@@ -4,8 +4,14 @@
     <title>Tags on Keyhan Kamyar</title>
     <link>http://localhost:1313/tags/</link>
     <description>Recent content in Tags on Keyhan Kamyar</description>
+    <image>
+      <title>Keyhan Kamyar</title>
+      <url>http://localhost:1313/images/social-card.png</url>
+      <link>http://localhost:1313/images/social-card.png</link>
+    </image>
     <generator>Hugo -- 0.151.0</generator>
     <language>en-us</language>
+    <copyright>2025 Keyhan Kamyar</copyright>
     <atom:link href="http://localhost:1313/tags/index.xml" rel="self" type="application/rss+xml" />
   </channel>
 </rss>

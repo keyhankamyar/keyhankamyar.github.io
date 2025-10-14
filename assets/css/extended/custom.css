@@ -1,0 +1,135 @@
+/* Improved dark theme colors - deeper, richer blacks */
+:root {
+    --theme: #1a1a1a;
+    --entry: #212121;
+    --primary: rgba(255, 255, 255, 0.92);
+    --secondary: rgba(255, 255, 255, 0.68);
+    --tertiary: rgba(255, 255, 255, 0.48);
+    --content: rgba(255, 255, 255, 0.88);
+    --hljs-bg: #1a1a1a;
+    --code-bg: #2a2a2a;
+    --border: rgba(255, 255, 255, 0.15);
+}
+
+/* Profile content styling */
+.profile-content {
+    max-width: 900px;
+    margin: 4rem auto 2rem;
+    padding: 0 1.5rem;
+    line-height: 1.8;
+    color: var(--content);
+}
+
+.profile-content h2 {
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.profile-content p {
+    margin-bottom: 1.2rem;
+}
+
+.profile-content strong {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.profile-content a {
+    color: #6b9eff;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-bottom-color 0.2s;
+}
+
+.profile-content a:hover {
+    border-bottom-color: #6b9eff;
+}
+
+.profile-content hr {
+    margin: 2rem 0;
+    border: none;
+    border-top: 1px solid var(--border);
+}
+
+/* Better code blocks */
+.profile-content code {
+    background: var(--code-bg);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* Compact profile section */
+.profile {
+    padding: 3rem 0 1rem;
+    min-height: auto !important;
+}
+
+.profile .profile_inner h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.profile .profile_inner > span {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.profile .buttons {
+    margin-top: 1.5rem;
+}
+
+.social-icons {
+    margin-top: 1rem;
+}
+
+/* Reduce excessive vertical spacing */
+.main {
+    min-height: auto;
+}
+
+/* Enhanced content styling with visual hierarchy */
+.profile-content h2 {
+    font-size: 1.4rem;
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(107, 158, 255, 0.3);
+}
+
+.profile-content h2:first-of-type {
+    margin-top: 1.5rem;
+}
+
+.profile-content p:first-child {
+    font-size: 1.15rem;
+    color: var(--secondary);
+    font-style: italic;
+    margin-bottom: 2rem;
+}
+
+.profile-content p {
+    margin-bottom: 1.5rem;
+    color: var(--content);
+}
+
+.profile-content strong {
+    color: #6b9eff;
+    font-weight: 600;
+}
+
+/* Style the stack section differently */
+.profile-content p:has(strong:first-child) {
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 0.95rem;
+    line-height: 2;
+    background: rgba(107, 158, 255, 0.05);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border-left: 3px solid #6b9eff;
+}
