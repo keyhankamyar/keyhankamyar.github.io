@@ -1,19 +1,28 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>My New Hugo Site</title>
-    <link>https://example.org/</link>
-    <description>Recent content on My New Hugo Site</description>
-    <generator>Hugo</generator>
+    <title>Keyhan Kamyar</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content on Keyhan Kamyar</description>
+    <generator>Hugo -- 0.151.0</generator>
     <language>en-us</language>
     <lastBuildDate>Tue, 14 Oct 2025 11:00:00 +0330</lastBuildDate>
-    <atom:link href="https://example.org/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Hello</title>
-      <link>https://example.org/posts/welcome/</link>
+      <link>http://localhost:1313/posts/welcome/</link>
       <pubDate>Tue, 14 Oct 2025 11:00:00 +0330</pubDate>
-      <guid>https://example.org/posts/welcome/</guid>
-      <description>&lt;p&gt;Welcome to my personal website 👋&lt;/p&gt;&#xA;&lt;p&gt;I’m &lt;strong&gt;Keyhan Kamyar&lt;/strong&gt;, a Machine Learning Engineer from Iran specializing in reinforcement learning, quantitative modeling, and AI-driven systems.&lt;/p&gt;&#xA;&lt;p&gt;This blog is where I’ll share:&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;My research and open-source projects&lt;/li&gt;&#xA;&lt;li&gt;Engineering insights, tips, and tutorials&lt;/li&gt;&#xA;&lt;li&gt;Reflections on my personal and professional journey&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;I built this site using &lt;a href=&#34;https://gohugo.io&#34;&gt;Hugo&lt;/a&gt; and &lt;a href=&#34;https://pages.github.com&#34;&gt;GitHub Pages&lt;/a&gt; to create a fast, lightweight, and fully open platform for my work.&lt;/p&gt;&#xA;&lt;p&gt;More posts and projects coming soon 🚀&lt;/p&gt;</description>
+      <guid>http://localhost:1313/posts/welcome/</guid>
+      <description>&lt;p&gt;Welcome to my personal website 👋&lt;/p&gt;
+&lt;p&gt;I’m &lt;strong&gt;Keyhan Kamyar&lt;/strong&gt;, a Machine Learning Engineer from Iran specializing in reinforcement learning, quantitative modeling, and AI-driven systems.&lt;/p&gt;
+&lt;p&gt;This blog is where I’ll share:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;My research and open-source projects&lt;/li&gt;
+&lt;li&gt;Engineering insights, tips, and tutorials&lt;/li&gt;
+&lt;li&gt;Reflections on my personal and professional journey&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I built this site using &lt;a href=&#34;https://gohugo.io&#34;&gt;Hugo&lt;/a&gt; and &lt;a href=&#34;https://pages.github.com&#34;&gt;GitHub Pages&lt;/a&gt; to create a fast, lightweight, and fully open platform for my work.&lt;/p&gt;
+&lt;p&gt;More posts and projects coming soon 🚀&lt;/p&gt;</description>
     </item>
   </channel>
 </rss>

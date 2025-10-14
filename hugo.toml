@@ -1,4 +1,9 @@
-baseURL = 'https://example.org/'
-theme = "ananke"
+baseURL = 'https://keyhankamyar.github.io/'
+theme = 'PaperMod'
 languageCode = 'en-us'
-title = 'My New Hugo Site'
+title = 'Keyhan Kamyar'
+
+[params]
+  defaultTheme = 'dark'        # force dark by default
+  disableThemeToggle = false   # keep the toggle if visitors want light
+  ShowReadingTime = true
