@@ -45,16 +45,6 @@ Started in urban engineering, quickly realized I needed more logic and less art.
 
 ---
 
-## 🌍 Current Situation
-
-Based in Iran. Married. Just got my passport after resolving military service exemption (medical). Dealing with 200%+ annual inflation, frequent power outages, economic collapse, and the aftermath of literal war.
-
-I'm not leaving because Iran is bad at tech—there are brilliant people here. I'm leaving because constraints compound. Every project requires workarounds. Every tool requires VPNs. Every transaction requires currency exchange calculations. Every plan includes "what if the internet goes down again."
-
-I have about 1-2 years of runway with current savings and passive income. Looking for opportunities where I can focus on building systems instead of navigating geopolitics.
-
----
-
 ## 🎯 What I'm Looking For
 
 Research labs or companies working on:

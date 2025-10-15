@@ -18,15 +18,17 @@ Specializing in **Deep Reinforcement Learning**, **Financial AI**, and **High-Pe
 
 ---
 
-## �� Current Focus
+## 🎯 Current Focus
 
 Developing novel RL architectures for algorithmic trading. Reformulating traditional actor-critic methods into more efficient multi-armed bandit frameworks. Building the infrastructure to train at scale.
 
 Shipping open-source tools that other researchers and engineers actually use:
 
-[![TickVault](https://img.shields.io/badge/TickVault-Financial_Data-blue?style=flat-square&logo=github)](https://github.com/keyhankamyar/TickVault) — High-performance financial tick data scraper
+[![TickVault](https://img.shields.io/badge/TickVault-Financial_Data-blue?style=flat-square&logo=github)](https://github.com/keyhankamyar/TickVault)
+High-performance financial tick data pipeline
 
-[![ProxyRotator](https://img.shields.io/badge/ProxyRotator-Web_Scraping-green?style=flat-square&logo=github)](https://github.com/keyhankamyar/ProxyRotator) — Production-ready async proxy rotation
+[![ProxyRotator](https://img.shields.io/badge/ProxyRotator-Web_Scraping-red?style=flat-square&logo=github)](https://github.com/keyhankamyar/ProxyRotator)
+Proxy Rotation for Scraping
 
 ---
 

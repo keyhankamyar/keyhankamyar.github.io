@@ -1,5 +1,5 @@
 ---
-title: "I Downloaded 2,000,000+ Hours of Market Data So You Don't Have To"
+title: "I Downloaded 2,000,000+ Hours of Market Tick Data So You Don't Have To"
 date: 2025-10-15T12:00:00+03:30
 draft: false
 tags: ["machine-learning", "finance", "open-source", "python", "data-engineering"]
@@ -29,11 +29,11 @@ If you've ever tried to work with financial market data at scale, you know the p
 
 **Tools that break at scale**. Libraries that crash on large downloads, can't resume, take forever to decode, or try to load everything into memory. Half are abandoned, the other half weren't built for production workloads.
 
-**Rate limits** that turn a 3-day download into a 3-week ordeal. Dukascopy's free datafeed is great—until you need 30 symbols across 20 years and you're suddenly bottlenecked at 5 requests per second.
+**Rate limits** that turn a 3-day download into a 3-week ordeal. Dukascopy's free datafeed is great—until you need 30 symbols across 20 years and you suddenly realize bottlenecked at 5 requests per second.
 
 **Expensive APIs** for data that should be free. Why pay hundreds per month when the raw data exists, if only there was a decent way to access it?
 
-Over the past few months, I downloaded and decoded 2,000,000+ hours of tick data from Dukascopy. Not because I enjoy infrastructure work—because I needed it for reinforcement learning research and nothing else worked. So I built TickVault.
+Over the past few months, I downloaded and decoded 2,000,000+ hours of tick data from Dukascopy. Not because I enjoy infrastructure work—because I needed it for reinforcement learning research. So I built TickVault.
 
 ## The Design
 
@@ -80,45 +80,47 @@ print(df.head())
 
 ## Why Existing Solutions Fall Short
 
-### The Resampling Trap
+### Why Tick Data? The Resampling Trap
 
 Most data sources give you pre-resampled data—hourly candles, 5-minute bars, daily OHLC. But who decided that's the right granularity for your problem?
 
-If you're training an ML model, why would you assume 1-hour bins are the optimal feature resolution? And even if hourly happens to work, why assume that Open, High, Low, Close captures what matters? You're throwing away every tick between those four points.
+Assumptions are the worse enemy of Machine Learning models. Let me explain more:
 
-Worse: **resampled data breaks risk calculations.** 
+Machine Learning models are **"function approximators"**. They will see what a function inputs, and what it outputs and try their best to mimic the behavior of that function that would results into the outcome. You wouldn't expect a function to receive only a subset of the inputs it needs and still give you the same output, would you? So we need to give all of the required inputs to a model, then hope that model learns to output the correct label.
 
-Say your strategy generates an entry at $1,850.23 and an exit at $1,850.89—a tight 66-pip window. Your stop-loss is at $1,849.95. The next hourly candle shows:
-- Open: $1,850.10
-- High: $1,851.20  
-- Low: $1,849.80
-- Close: $1,850.95
+Tick data has some problems as it's raw form:
+- It is too granular, this leads to huge dimensions and massive memory and compute requirements
+- It is irregular and does not follow a structured pattern in time
 
-Did you hit your take-profit at $1,850.89? Or did the price drop to $1,849.95 first and stop you out? **The candle doesn't tell you.** You can't calculate your actual risk, can't validate your strategy, can't trust your backtest.
+So, traditional approaches was to simply bin them, or "Resample" them. We would bucket the data into bins, and just handpicked some values. This was a more eye-pleasing and manageable approach for human interaction. This approach had several issues. Some top ones among them:
+- What if a certain event happens so quickly that fits into one bucket? We used multiple bucket size representations also known as multi **"timeframe charts"** to try to mitigate that.
+- What if there are some time cyclical pattern in data that because of our arbitrary choice of bin width(timeframe) we lose that view/insight?
+- What features do we have to choose from each bucket? Traditionally OHLC or Open, High, Low, Close
+- Resampled data breaks risk calculations in back-testing. Say your strategy generates an entry at $1,850.23 and an exit at $1,850.89—a tight 66-pip window. Your stop-loss is at $1,849.95. The next hourly candle shows [Open: $1,850.10, High: $1,851.20, Low: $1,849.80, Close: $1,850.95]. Did you hit your take-profit at $1,850.89? Or did the price drop to $1,849.95 first and stop you out? **The candle doesn't tell you.** You can't calculate your actual risk, can't validate your strategy, can't trust your backtest. Even if your entry and exit are far apart, sudden volatility can create the same problem. A single hourly candle that spans $10 might contain a flash crash that would have stopped you out—but the OHLC makes it look like smooth sailing.
 
-Even if your entry and exit are far apart, sudden volatility can create the same problem. A single hourly candle that spans $10 might contain a flash crash that would have stopped you out—but the OHLC makes it look like smooth sailing.
+We had to make so many assumptions that we did not know if they are correct or not. If you're training an ML model, why would you assume 1-hour bins are the optimal feature resolution? And even if hourly happens to work, why assume that Open, High, Low, Close captures what matters? You're throwing away every tick between those four points and the order of events.
 
 If you're serious about modeling market dynamics, you need tick-level data. Everything else is a lossy approximation.
 
 ### Tools That Don't Scale
 
-So you decide you need tick data. You search GitHub for "dukascopy python" and find... a graveyard.
+So you decide you need tick data. After some search you figure out your best bet for high quality data is dukascopy. You search GitHub for "dukascopy python" and find... a graveyard.
 
-**Half the repos haven't been touched in 3+ years.** Broken dependencies, no type hints, no tests. READMEs that promise the world but crash on Python 3.9+. They worked once, for someone, in 2018.
+**Half the repos haven't been touched in 3+ years.** Broken dependencies, no type hints, no tests. READMEs that promise but crash on Python 3.12. They worked once, for someone, in 2018.
 
-**The active ones weren't built for production.** You start downloading 2 years of EUR/USD. Six hours in, your connection drops. Start over from scratch—there's no resume logic. Or manually figure out which chunks are missing and pray your script handles partial state.
+**The active ones weren't built for production ML.** You start downloading 2 years of EUR/USD. Six hours in, your connection drops. Start over from scratch—there's no resume logic. Or manually read the logs, study the architecture and try to figure out what is missing, make a script and pray your script handles partial state.
 
-**Memory management is an afterthought.** Some libraries load entire datasets into RAM before processing. Fine for a weekend of data. Catastrophic when you need 10 years across 30 symbols and your laptop has 16GB. Your kernel just got killed.
+**Memory management is an afterthought.** Some libraries load entire datasets into RAM before processing. Fine for a weekend of data. Catastrophic when you need 10 years across 30 symbols.
 
 **Decoding is painfully slow.** Single-threaded, pure Python loops processing millions of ticks. Every inefficiency compounds when you're working at scale. What should take minutes takes hours.
 
-I duct-taped together scripts for a year—custom resume logic, manual retry handling, homegrown decoders. Then I got tired of maintaining infrastructure when I should have been training models.
+I used to alo duct-tape together scripts for a while—custom resume logic, manual retry handling, homegrown decoders. Then I got tired of maintaining infrastructure when I should have been training models.
 
 ### The Bandwidth Bottleneck
 
 Dukascopy's datafeed is free and high-quality. It's also aggressively rate-limited.
 
-You can download maybe 5-10 requests per second before you start getting 429s (rate limit errors) or 503s (service unavailable). That's fine if you're grabbing a week of one symbol. It's a nightmare when you need:
+You can download maybe 5-10 requests per second before you start getting 429s ( errors) or 503s (service unavailable). That's fine if you're grabbing a week of one symbol. It's a nightmare when you need:
 
 - 30 currency pairs
 - 20 years of history each  
@@ -127,17 +129,17 @@ You can download maybe 5-10 requests per second before you start getting 429s (r
 
 At 5 requests/second with perfect uptime, that's **12 days of continuous downloading.** In practice, with retries, backoff delays, and occasional connection issues? Closer to 3 weeks.
 
-And that's assuming you're using a single connection. Most libraries don't support concurrent downloads, let alone proxy rotation to distribute load. You're stuck babysitting a single-threaded script for weeks, hoping nothing crashes overnight.
+And that's assuming you're using a single connection. Most libraries don't support concurrent downloads, let alone load distribution. You're stuck babysitting a script for weeks, hoping nothing crashes overnight.
 
 **The bottleneck isn't your internet connection. It's the architecture of the tools.**
 
 ### The Cost vs Quality Tradeoff
 
-You could just pay for data. Plenty of vendors will sell you tick data—$500/month, $2,000/month, enterprise contracts with minimums.
+You could just pay for data. Plenty of vendors will sell you tick data—$X/month, enterprise contracts with minimums.
 
-For a hedge fund, that's a rounding error. For an independent researcher, a grad student, or someone in a country where $500/month is half a salary? It's a non-starter.
+For a hedge fund, that's a rounding error. For an independent researcher, a grad student, or someone in a country where $500/month is twice a salary? It's a non-starter.
 
-And you're often paying for **convenience, not quality.** Many paid APIs are just reselling the same Dukascopy data you could get for free, wrapped in a nicer interface. You're paying someone else to solve the download problem.
+And you're often paying for **convenience, not quality.** Many paid APIs are just reselling the same Dukascopy data you could get for free, wrapped in a nicer interface. You're paying someone else to solve the problem.
 
 Which would be fine—if the free tools actually worked. But they don't. So you're stuck choosing between:
 
@@ -149,7 +151,7 @@ Which would be fine—if the free tools actually worked. But they don't. So you'
 
 ## How TickVault Works Differently
 
-I didn't want to build "yet another Dukascopy wrapper." I wanted to solve the underlying architectural problems that make existing tools fragile.
+I didn't want to build "yet another Dukascopy wrapper." I wanted to solve the underlying architectural problems that make existing tools fragile. A minimal, pythonic, type-safe, performant, and scalable solution.
 
 ### Store Raw, Mirror 1:1
 
@@ -174,7 +176,7 @@ Every file is stored in its original compressed `.bi5` format. No reformatting, 
 
 **Reproducibility.** Your resampling strategy from 6 months ago produced different results today? The raw data hasn't changed—you can investigate. With pre-processed data, you're just guessing.
 
-**Storage efficiency.** Compressed tick data is surprisingly small. 20 years of Gold (200,000+ hourly files) is ~15GB. Keep the originals, transform on-demand.
+**Storage efficiency.** Compressed tick data is surprisingly small. 20 years of Gold (200,000+ hourly files) is <15GB. Keep the originals, transform on-demand.
 
 **Future-proof.** Decide you need millisecond timestamps instead of your current second-level precision? The raw ticks are still there. You're not locked into past decisions.
 
@@ -205,7 +207,7 @@ Each symbol gets its own table. Each hour gets a row with two pieces of informat
 
 **Gap detection.** Before reading data, TickVault verifies continuity. Missing hours in the middle of your range? It tells you before you waste time on a broken dataset.
 
-**The producer-consumer pattern:** Download workers (producers) fetch chunks concurrently and push results to a queue. A single metadata worker (consumer) batches database writes. This avoids database lock contention while maintaining consistency—even with 50 parallel workers hammering away.
+**The producer-consumer pattern:** Download workers (producers) fetch chunks concurrently and push results to a queue. A single metadata worker (consumer) batches database writes. This avoids database lock contention while maintaining consistency—even with 500 parallel workers hammering away.
 
 ### Parallel Everything
 
@@ -229,15 +231,15 @@ Each proxy gets its own pool of async workers (default: 10 per proxy). Each work
 
 **Why this matters:**
 
-**Speed.** With 3 proxies and 10 workers each, you're making 30 concurrent requests. That 12-day download? Now it's done in hours.
+**Speed.** With 7 proxies and 10 workers each, you're making 70 concurrent requests. That 12-day download? Now it's done in hours.
 
-**Rate limit mitigation.** Dukascopy rate-limits per IP. Distributing requests across proxies means you're not constantly hitting 429s and backing off.
+**Rate limit mitigation.** Dukascopy rate-limits per IP. Distributing requests across proxies means you're not constantly hitting limits and backing off.
 
-**Fault tolerance.** One worker crashes? The other 29 keep going. One proxy gets blocked? Its workers fail gracefully while the others continue. The orchestrator handles backpressure—if downloads are faster than metadata writes, the queue fills up and workers naturally slow down.
+**Fault tolerance.** One worker hangs? The other 69 keep going. One proxy gets blocked? Its workers fail gracefully while the others continue. The orchestrator handles backpressure—if downloads are faster than metadata writes, the queue fills up and workers naturally slow down.
 
 **Exponential backoff with context.** Transient network error? Retry with increasing delays. Rate limit with `Retry-After` header? Respect it. Forbidden/blocked? Fail fast and stop wasting time.
 
-The async architecture means you're not waiting on I/O. While one worker is waiting for a response, 29 others are fetching, decoding, or writing.
+The async architecture means you're not waiting on I/O. While one worker is waiting for a response, 69 others are fetching, decoding, or writing.
 
 ### Decode On-Demand
 
@@ -247,27 +249,22 @@ When you call `read_tick_data()`:
 1. Query the metadata database for available chunks in your time range
 2. Verify there are no gaps (fail fast if data is incomplete)
 3. Load each compressed chunk sequentially
-4. Decompress with LZMA, decode with NumPy structured arrays
-5. Concatenate into a single pandas DataFrame
+4. Decompress with LZMA, decode with NumPy structured arrays, fully vectorized
 
 **Why this matters:**
-
-**Memory efficiency.** You can store 10TB of compressed data and work with 1GB at a time. The same code works whether you're reading one day or ten years—memory usage stays constant because you're streaming through chunks, not loading everything upfront.
 
 **Flexibility.** Want to resample to 5-minute bars today and 1-second bars tomorrow? The raw ticks are still there. Want to calculate VWAP using actual volumes instead of approximations? You have the data. Every transformation is non-destructive.
 
 **Fast enough.** Decompression and decoding are fast—LZMA is optimized, NumPy handles binary parsing efficiently. For most use cases, the bottleneck is your analysis code, not the data loading.
 
-**Coming soon:** Incremental decode-to-database pipelines. Stream chunks directly to SQLite or HDF5 for efficient querying without loading into memory. Same raw source files, different materialization strategies—pick what fits your workflow.
+**Coming soon:** Incremental decode-to-database pipelines. Stream chunks directly to SQLite or HDF5 for efficient querying without loading into memory. Same raw source files, different materialization strategies—pick what fits your workflow. You can store N-TB of compressed data and work with 1GB at a time. The same code works whether you're reading one day or ten years—memory usage stays constant because you're streaming through chunks, not loading everything upfront.
 
 The pattern is simple: **download once, transform many times.** Keep the highest-resolution version, derive everything else as needed.
 
-## Show Me the Code
+## Now Some Code
 
 ### Basic Workflow
-```bash
-pip install tick-vault
-```
+"pip install tick-vault" if you haven't already!
 
 Download and read:
 ```python
@@ -298,17 +295,14 @@ print(df.head())
 # Use multiple proxies to distribute load and avoid rate limits
 await download_range(
     symbol='EURUSD',
-    start=datetime(2023, 1, 1),
-    end=datetime.now(),
+    start=datetime(2000, 1, 1),
+    end=None, # Or datetime.now() for the same effect
     proxies=[
         'http://proxy1.example.com:8080',
         'http://proxy2.example.com:8080',
         'http://proxy3.example.com:8080'
     ]
 )
-
-# With 3 proxies × 10 workers each = 30 concurrent downloads
-# That 12-day download? Now it's hours.
 ```
 
 ### Configuration
@@ -331,6 +325,8 @@ export TICK_VAULT_WORKER_PER_PROXY=15
 export TICK_VAULT_CONSOLE_LOG_LEVEL=INFO
 ```
 
+> Full configuration reference in the [repo](https://github.com/keyhankamyar/TickVault)  
+
 ### Resuming and Incremental Updates
 ```python
 # Download interrupted? Just run it again
@@ -352,7 +348,7 @@ await download_range(
 
 ### Data Validation
 ```python
-# Strict mode (default): ensures no gaps in data
+# Strict mode (default): ensures the exact provided range is present
 df = read_tick_data(
     symbol='XAUUSD',
     start=datetime(2024, 1, 1),
@@ -360,7 +356,7 @@ df = read_tick_data(
     strict=True  # Raises error if any hours are missing
 )
 
-# Non-strict mode: clips to available data range
+# Non-strict mode: clips to available data range, still raises error if there are gaps between
 df = read_tick_data(
     symbol='XAUUSD',
     start=datetime(2020, 1, 1),  # May be before first available
@@ -411,24 +407,22 @@ df = read_tick_data(
 TickVault works well for my needs, but there's room to grow. Here's what's on the roadmap:
 
 **Download Pipeline:**
-- Async stop events for cleaner worker termination (currently uses sentinel values)
 - Dynamic worker auto-balancing with throughput monitoring
 - Adaptive scaling: gradually increase workers until throughput plateaus, then back off
+- Async stop events for cleaner worker termination (currently uses sentinel values)
 
 **Reading Pipeline:**
-- Multi-threading and multi-processing support for parallel decoding
+- Multi-threading and multi-processing support for parallel decoding. Not generally needed since it is mostly I/O bound but for rapid SSDs might come handy!
 - Streaming decode-to-SQLite pipeline for memory-efficient querying
 - HDF5 storage backend option for large datasets
 
 **Developer Experience:**
 - CLI interface for common operations (`tickvault download XAUUSD --start 2024-01-01`)
 - Comprehensive pytest test suite
-- Jupyter notebook tutorials and usage examples
-- Better documentation with real-world patterns
 
 **General:**
 - Reorganized module structure as the codebase grows
-- Unified `download_and_read()` convenience function
+- Unified `download_and_read()` convenience function, so you don't have to call two functions 🥱
 - More symbols added to the pipet scale registry
 
 The core is stable. These are refinements, not fundamental changes. If you have ideas or want to contribute, issues and PRs are welcome.
@@ -442,13 +436,13 @@ pip install tick-vault
 
 **If it solves a problem for you, star the repo.** Stars help other researchers find tools that actually work.
 
-**If you find issues or have ideas,** open an issue or PR. The codebase is small enough to understand in an afternoon—`tick_vault/` is ~1,500 lines across 13 modules.
+**If you find issues or have ideas,** open an issue or PR. The codebase is minimal and clean enough to understand in an afternoon.
 
 **If you just want to follow along,** I'll be writing more about the RL research this was built for, the performance optimizations, and lessons from building production data pipelines.
 
 ---
 
-I built TickVault because I needed tick data for reinforcement learning research and nothing else worked well enough. Turns out "download financial data reliably" is harder than it sounds.
+I built TickVault because I needed tick data for reinforcement learning research and nothing else worked well enough.
 
 If you're in the same boat—tired of resampled data, broken tools, and expensive APIs—this might help.
 
