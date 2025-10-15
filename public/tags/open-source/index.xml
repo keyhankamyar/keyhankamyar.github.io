@@ -2,24 +2,24 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Open-Source on Keyhan Kamyar</title>
-    <link>http://localhost:1313/tags/open-source/</link>
+    <link>https://keyhankamyar.github.io/tags/open-source/</link>
     <description>Recent content in Open-Source on Keyhan Kamyar</description>
     <image>
       <title>Keyhan Kamyar</title>
-      <url>http://localhost:1313/images/social-card.png</url>
-      <link>http://localhost:1313/images/social-card.png</link>
+      <url>https://keyhankamyar.github.io/images/social-card.png</url>
+      <link>https://keyhankamyar.github.io/images/social-card.png</link>
     </image>
     <generator>Hugo -- 0.151.0</generator>
     <language>en-us</language>
     <copyright>2025 Keyhan Kamyar</copyright>
     <lastBuildDate>Wed, 15 Oct 2025 12:00:00 +0330</lastBuildDate>
-    <atom:link href="http://localhost:1313/tags/open-source/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://keyhankamyar.github.io/tags/open-source/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>I Downloaded 2,000,000&#43; Hours of Market Tick Data So You Don&#39;t Have To</title>
-      <link>http://localhost:1313/posts/tickvault-introduction/</link>
+      <link>https://keyhankamyar.github.io/posts/tickvault-introduction/</link>
       <pubDate>Wed, 15 Oct 2025 12:00:00 +0330</pubDate>
-      <guid>http://localhost:1313/posts/tickvault-introduction/</guid>
-      <description>TickVault: A high-performance Python library for downloading and processing financial tick data from Dukascopy. Solves the resampling trap, rate limits, and broken tools that plague quantitative research.</description>
+      <guid>https://keyhankamyar.github.io/posts/tickvault-introduction/</guid>
+      <description>TickVault: Open-source Python library for downloading high-quality financial tick data from Dukascopy. Built for quantitative researchers and algorithmic traders. Handles parallel downloads, rate limits, resume capability, and on-demand decoding. Free alternative to expensive tick data APIs.</description>
     </item>
   </channel>
 </rss>
