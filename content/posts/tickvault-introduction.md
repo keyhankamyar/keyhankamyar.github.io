@@ -287,15 +287,13 @@ Each proxy gets its own pool of async workers (default: 10 per proxy). Each work
 
 **Why this matters:**
 
-⚡ **Speed** — With 7 proxies × 10 workers = 70 concurrent requests. That 12-day download? **Done in hours.**
+**Speed** — With 7 proxies × 10 workers = 70 concurrent requests. That 12-day download? **Done in hours.**
 
-🛡️ **Rate limit mitigation** — Dukascopy rate-limits per IP. Distributing across proxies means you're not constantly hitting limits and backing off.
+**Rate limit mitigation** — Dukascopy rate-limits per IP. Distributing across proxies means you're not constantly hitting limits and backing off.
 
-🔄 **Fault tolerance** — One worker hangs? The other 69 keep going. One proxy blocked? Its workers fail gracefully while others continue. The orchestrator handles backpressure—if downloads outpace metadata writes, the queue fills and workers naturally slow down.
+**Fault tolerance** — One worker hangs? The other 69 keep going. One proxy blocked? Its workers fail gracefully while others continue. The orchestrator handles backpressure—if downloads outpace metadata writes, the queue fills and workers naturally slow down.
 
-🎯 **Exponential backoff with context** — Transient network error? Retry with increasing delays. Rate limit with `Retry-After` header? Respect it. Forbidden/blocked? Fail fast, stop wasting time.
-
-> The async architecture means you're never waiting on I/O. While one worker awaits a response, 69 others are fetching, decoding, or writing.
+**Exponential backoff with context** — Transient network error? Retry with increasing delays. Rate limit with `Retry-After` header? Respect it. Forbidden/blocked? Fail fast, stop wasting time.
 
 ### Decode On-Demand
 
