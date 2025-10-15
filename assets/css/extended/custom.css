@@ -133,3 +133,8 @@
     border-radius: 8px;
     border-left: 3px solid #6b9eff;
 }
+
+.post-single .post-description,
+.post-single .post-summary {
+    display: none;
+}

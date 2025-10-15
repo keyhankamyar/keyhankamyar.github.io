@@ -35,7 +35,7 @@ copyright = "© 2025 Keyhan Kamyar"
   disableScrollToTop = false
   comments = false
   hidemeta = false
-  hideSummary = false
+  hideSummary = true
   showtoc = true
   tocopen = false
 
