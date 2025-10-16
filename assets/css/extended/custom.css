@@ -1,5 +1,5 @@
-/* Improved dark theme colors - deeper, richer blacks */
-:root {
+/* Dark theme colors - only apply when dark theme is active */
+.dark {
     --theme: #1a1a1a;
     --entry: #212121;
     --primary: rgba(255, 255, 255, 0.92);
