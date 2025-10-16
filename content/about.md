@@ -33,27 +33,28 @@ Started in urban engineering, quickly realized I needed more logic and less art.
 
 ---
 
-## 💭 Technical Philosophy
+## 🛠️ How I Work
 
-**Theory is the map; implementation is the territory.** I read papers to understand principles, then build systems to find out what actually works. Most breakthrough papers have implementation details that make or break their claims.
+**I move between research and production fluently.** Half my time goes to research - reading papers as they drop, implementing novel architectures, reformulating problems in new ways, running experiments that might fail. The other half goes to production engineering - type-safe pipelines, monitoring, systems that run reliably at scale. I'm equally comfortable shipping a production API and prototyping a research idea.
 
-**Optimization isn't premature if you understand the bottleneck.** Custom Numba kernels, memory-mapped arrays, vectorized operations—these aren't tricks, they're prerequisites when you're processing 100M+ rows.
+**Theory and practice inform each other.** I read papers to understand principles and find breakthrough ideas, then build systems to test whether they actually work. Most research claims don't survive real data and production constraints. The gap between "works in the paper" and "works in production" is where I operate - and where the interesting problems live.
 
-**Production systems need different skills than research code.** Type safety with Pydantic, comprehensive logging, graceful degradation, monitoring, testing—these aren't optional. They're what separates a notebook from a product.
+**Optimization isn't premature if you understand the bottleneck.** Custom Numba kernels, memory-mapped arrays, vectorized operations - these aren't tricks when you're processing 100M+ rows. But I profile first. Measure, identify the real constraint, then optimize deliberately. Bad infrastructure kills good research; good engineering enables it.
 
-**The best code is boring code.** Clear names, simple logic, obvious structure. Clever code is a liability. Maintainable code is an asset.
+**The best code is maintainable code.** Clear structure, explicit error handling, comprehensive tests. Whether it's a research prototype or a production system, code gets read more than it gets written. Clever code becomes a liability. Boring, well-documented code is an asset.
 
 ---
 
 ## 🎯 What I'm Looking For
 
-Research labs or companies working on:
-- Deep RL for real-world control problems
-- Financial ML / quantitative systems  
-- Large-scale ML infrastructure
-- Systems that actually ship to users
+Research labs, quant firms, or ML-focused companies where I can:
 
-Places where "we should try that paper" leads to "here's the implementation" within days, not months. Teams that value builders over talkers.
+- **Drive research** on hard problems - Deep RL, financial ML, large-scale systems, or adjacent domains where depth matters
+- **Ship production systems** that users actually depend on
+- **Work with people** who value both rigorous experimentation and reliable engineering
+- **Move fast** - from "interesting paper" to "working implementation" to "deployed system" in days, not months
+
+I'm looking for teams where "let's try that paper" leads to real implementation quickly, and where production systems are built by people who understand the research deeply. Places where building systems and pushing research forward aren't separate tracks - they're the same job.
 
 ---
 
