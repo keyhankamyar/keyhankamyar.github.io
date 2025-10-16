@@ -34,9 +34,18 @@ author: "Keyhan Kamyar"
 canonicalURL: "https://keyhankamyar.github.io/posts/tickvault-introduction/"
 ---
 
+If you've ever tried to work with financial market data at scale, you know the pain points - and you're in the right place. If you're just starting, great timing. This post can save you months of frustration.
+
+We'll discuss the **curse of resampling**, why **existing tools break at scale**, and how to actually solve these problems.
+
+[![GitHub](https://img.shields.io/badge/GitHub-TickVault-181717?style=flat-square&logo=github)](https://github.com/keyhankamyar/TickVault)
+[![PyPI](https://img.shields.io/pypi/v/tick-vault?style=flat-square)](https://pypi.org/project/tick-vault/)
+
+---
+
 ### ⚠️ The Problem
 
-If you've ever tried to work with financial market data at scale, you know the pain points:
+Let me start with the quick overview, then we'll dig into the details.
 
 **Arbitrary resampling** hides the movements you actually care about. Your model says enter at $1,850.23, exit at $1,850.89—but your hourly candle shows High: $1,851.20, Low: $1,849.80. Did your stop-loss trigger first, or did you hit take-profit? *The data doesn't tell you.*
 
@@ -46,65 +55,9 @@ If you've ever tried to work with financial market data at scale, you know the p
 
 **Expensive APIs** for data that should be free. Why pay hundreds per month when the raw data exists—if only there was a proper way to access it?
 
-> Over the past few months, I downloaded and decoded **2,000,000+ hours** of tick data from Dukascopy. Not because I enjoy infrastructure work—because I needed it for reinforcement learning research. So I built **TickVault**.
+Over the past few months, I downloaded and decoded **2,000,000+ hours** of tick data from Dukascopy. Not because I enjoy building tools*—because I needed it for reinforcement learning research. So I built **TickVault**.
 
----
-
-## 🏗️ The Design Philosophy
-
-I built TickVault around three core principles:
-
-### 1️⃣ Mirror Dukascopy's Structure 1:1
-
-No reformatting, no "clever" reorganization. The filesystem layout matches the source URLs exactly. No surprises when you need to debug. **Single source of truth.**
-
-### 2️⃣ Store Raw, Compressed Data
-
-Keep the original `.bi5` files as-is. Change your resampling strategy in 6 months? No re-downloading terabytes. Need to reproduce results from a year ago? The data hasn't been pre-processed into irrelevance.
-
-**ELT over ETL** — extract and store, transform when you need it.
-
-### 3️⃣ Decode On-Demand
-
-Want one day of EUR/USD? Decompress those 24 hourly chunks. Want 5 years of 30 symbols? Same code path, just more chunks. Memory usage stays constant because you're not loading everything upfront.
-
----
-
-## 🚀 Quick Start
-
-Here's what that looks like in code:
-```bash
-pip install tick-vault
-```
-
-Download a month of gold tick data:
-```python
-from datetime import datetime
-from tick_vault import download_range
-
-await download_range(
-    symbol='XAUUSD',
-    start=datetime(2024, 1, 1),
-    end=datetime(2024, 2, 1)
-)
-```
-> By default the data would be stored in "tick_vault_data" directory in you current working directory. You can change this default behavior. More on this in the **"Configuration"** section bellow, or refer to the full configuration table and details in the [repo](https://github.com/keyhankamyar/TickVault).
-
-Read it back as a pandas DataFrame:
-```python
-from tick_vault import read_tick_data
-
-df = read_tick_data(
-    symbol='XAUUSD',
-    start=datetime(2024, 1, 1),
-    end=datetime(2024, 2, 1)
-)
-
-print(df.head())
-# time                     ask        bid      ask_volume  bid_volume
-# 2024-01-01 00:00:01.234  2062.450  2062.430  150         230
-# ...
-```
+*Okay, I do enjoy building tools. But this one was pure necessity.
 
 ---
 
@@ -125,17 +78,21 @@ Raw tick data has inherent challenges:
 
 The traditional solution? **Resampling.** Bucket the data into fixed time bins and handpick representative values. More manageable for humans, but riddled with problems:
 
+**The first problem: Hidden assumptions.**
+
 **❌ Event Loss:** Fast events compressed into one bucket lose critical detail. Multi-timeframe charts tried to help, but added complexity.
 
 **❌ Hidden Patterns:** Arbitrary bin widths (1-hour, 5-minute) can mask cyclical patterns your model needs to see.
 
 **❌ Feature Limitation:** OHLC (Open, High, Low, Close) throws away every tick between those four points—and the *order* of events.
 
-**❌ Broken Backtesting:** Your strategy enters at $1,850.23, exits at $1,850.89 (66-pip window). Stop-loss at $1,849.95. The hourly candle shows `[O: 1850.10, H: 1851.20, L: 1849.80, C: 1850.95]`. 
+If you're training an ML model, why would you assume 1-hour bins are the optimal feature resolution? And even if hourly happens to work, why assume that Open, High, Low, Close captures what matters? You're throwing away every tick between those four points and the order of events.
+
+**The second problem: Broken backtests.**
+
+Your strategy enters at $1,850.23, exits at $1,850.89 (66-pip window). Stop-loss at $1,849.95. The hourly candle shows `[O: 1850.10, H: 1851.20, L: 1849.80, C: 1850.95]`. 
 
 Did you hit take-profit at $1,850.89? Or did price drop to $1,849.95 first and stop you out? **The candle doesn't tell you.** You can't calculate actual risk, can't validate your strategy, can't trust your backtest. A single candle spanning $10 might hide a flash crash that stopped you out—but OHLC makes it look like smooth sailing.
-
-We had to make so many assumptions that we did not know if they are correct or not. If you're training an ML model, why would you assume 1-hour bins are the optimal feature resolution? And even if hourly happens to work, why assume that Open, High, Low, Close captures what matters? You're throwing away every tick between those four points and the order of events.
 
 If you're serious about modeling market dynamics, you need tick-level data. Everything else is a lossy approximation.
 
@@ -199,6 +156,64 @@ Which would be fine—if the free tools actually worked. But they don't.
 > **There should be a fourth option:** Free, high-quality, and actually usable at scale.
 
 > **That's TickVault.**
+
+---
+
+## 🏗️ The Design Philosophy
+
+I built TickVault around three core principles:
+
+### 1) Mirror Dukascopy's Structure 1:1
+
+No reformatting, no "clever" reorganization. The filesystem layout matches the source URLs exactly. No surprises when you need to debug. **Single source of truth.**
+
+### 2) Store Raw, Compressed Data
+
+Keep the original `.bi5` files as-is. Change your resampling strategy in 6 months? No re-downloading terabytes. Need to reproduce results from a year ago? The data hasn't been pre-processed into irrelevance.
+
+**ELT over ETL** — extract and store, transform when you need it.
+
+### 3) Decode On-Demand
+
+Want one day of EUR/USD? Decompress those 24 hourly chunks. Want 5 years of 30 symbols? Same code path, just more chunks. Memory usage stays constant because you're not loading everything upfront.
+
+---
+
+## 🚀 Quick Start
+
+These principles translate into a simple, powerful API. Here's what that looks like in code:
+```bash
+pip install tick-vault
+```
+
+Download a month of gold tick data:
+```python
+from datetime import datetime
+from tick_vault import download_range
+
+await download_range(
+    symbol='XAUUSD',
+    start=datetime(2024, 1, 1),
+    end=datetime(2024, 2, 1)
+)
+```
+> By default the data would be stored in "tick_vault_data" directory in you current working directory. You can change this default behavior. More on this in the **"Configuration"** section bellow, or refer to the full configuration table and details in the [repo](https://github.com/keyhankamyar/TickVault).
+
+Read it back as a pandas DataFrame:
+```python
+from tick_vault import read_tick_data
+
+df = read_tick_data(
+    symbol='XAUUSD',
+    start=datetime(2024, 1, 1),
+    end=datetime(2024, 2, 1)
+)
+
+print(df.head())
+# time                     ask        bid      ask_volume  bid_volume
+# 2024-01-01 00:00:01.234  2062.450  2062.430  150         230
+# ...
+```
 
 ---
 
