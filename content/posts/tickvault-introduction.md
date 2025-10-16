@@ -531,7 +531,5 @@ If you're in the same boat—tired of resampled data, broken tools, and expensiv
 
 ---
 
-**Connect:**
-
 [![GitHub](https://img.shields.io/badge/GitHub-keyhankamyar%2FTickVault-181717?style=for-the-badge&logo=github)](https://github.com/keyhankamyar/TickVault)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-keyhan--kamyar-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/keyhan-kamyar/)
