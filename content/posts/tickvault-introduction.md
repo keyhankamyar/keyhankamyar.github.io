@@ -34,11 +34,9 @@ author: "Keyhan Kamyar"
 canonicalURL: "https://keyhankamyar.github.io/posts/tickvault-introduction/"
 ---
 
+### ⚠️ The Problem
+
 If you've ever tried to work with financial market data at scale, you know the pain points:
-
----
-
-### 🎯 The Core Problems
 
 **Arbitrary resampling** hides the movements you actually care about. Your model says enter at $1,850.23, exit at $1,850.89—but your hourly candle shows High: $1,851.20, Low: $1,849.80. Did your stop-loss trigger first, or did you hit take-profit? *The data doesn't tell you.*
 
@@ -72,7 +70,7 @@ Want one day of EUR/USD? Decompress those 24 hourly chunks. Want 5 years of 30 s
 
 ---
 
-### 🚀 Quick Start
+## 🚀 Quick Start
 
 Here's what that looks like in code:
 ```bash
@@ -90,6 +88,7 @@ await download_range(
     end=datetime(2024, 2, 1)
 )
 ```
+> By default the data would be stored in "tick_vault_data" directory in you current working directory. You can change this default behavior. More on this in the **"Configuration"** section bellow, or refer to the full configuration table and details in the [repo](https://github.com/keyhankamyar/TickVault).
 
 Read it back as a pandas DataFrame:
 ```python
@@ -109,7 +108,7 @@ print(df.head())
 
 ---
 
-## ⚠️ Why Existing Solutions Fall Short
+## 🚩 Why Existing Solutions Fall Short
 
 ### Why Tick Data? The Resampling Trap
 
@@ -203,13 +202,13 @@ Which would be fine—if the free tools actually worked. But they don't.
 
 ---
 
-## ⚙️ How TickVault Works Differently
+## 💡 How TickVault Works Differently
 
 I didn't want to build "yet another Dukascopy wrapper." I wanted to solve the **underlying architectural problems** that make existing tools fragile.
 
 **The goal:** Minimal, Pythonic, type-safe, performant, and scalable.
 
-### 🗂️ Store Raw, Mirror 1:1
+### Store Raw, Mirror 1:1
 
 TickVault's filesystem structure mirrors Dukascopy's URL structure **exactly:**
 ```
