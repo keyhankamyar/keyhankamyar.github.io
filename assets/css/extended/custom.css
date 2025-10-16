@@ -125,7 +125,7 @@
 
 /* Style the stack section differently */
 .profile-content p:has(strong:first-child) {
-    font-family: 'Monaco', 'Courier New', monospace;
+    font-family: 'SF Mono', 'Consolas', 'Roboto Mono', 'Ubuntu Mono', monospace;
     font-size: 0.95rem;
     line-height: 2;
     background: rgba(107, 158, 255, 0.05);
