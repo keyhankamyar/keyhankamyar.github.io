@@ -29,7 +29,7 @@ Started in urban engineering, quickly realized I needed more logic and less art.
 
 **2022-2024 • MetaScape (Fintech)** — Built news scraping pipelines, sentiment analysis systems, portfolio optimization with RL. First experience with production CI/CD, structured logging, and the reality that 80% of ML engineering is data engineering.
 
-**2024-Present • Independent Research** — Reformulating trading as multi-armed bandits instead of sequential RL. Building systems that scale. Shipping open-source tools. Looking for the next challenge.
+**2024-Present • ML Engineer (Contract/Freelance)** — Reformulating trading as multi-armed bandits instead of sequential RL. Building systems that scale. Shipping open-source tools. Looking for the next challenge.
 
 ---
 
