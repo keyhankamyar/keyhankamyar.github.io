@@ -1,6 +1,6 @@
 ---
 title: "Declarative, Conditional Search Spaces - The Missing Tool for HPO"
-date: 2025-01-20T12:00:00+03:30
+date: 2025-10-28T12:00:00+03:30
 draft: false
 tags: ["machine-learning", "hyperparameter-optimization", "neural-architecture-search", "python", "research-tools", "open-source"]
 categories: ["Projects"]
