@@ -121,6 +121,9 @@ copyright = "© 2025 Keyhan Kamyar"
   priority = 0.5
 
 [markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
   [markup.highlight]
     anchorLineNos = false
     codeFences = true
