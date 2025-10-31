@@ -1,10 +1,10 @@
 ---
-title: "300 Parameters and No Plan? Meet SpaX"
+title: "Declarative, Conditional Search Spaces - The Missing Tool for HPO"
 date: 2025-01-20T12:00:00+03:30
 draft: false
 tags: ["machine-learning", "hyperparameter-optimization", "neural-architecture-search", "python", "research-tools", "open-source"]
 categories: ["Projects"]
-description: "Here's what nobody tells you about hyperparameter optimization and neural architecture search at scale: you don't search 300+ parameters at once. SpaX is built around iterative refinement - the workflow that actually works. Type-safe search spaces, conditional parameters, progressive narrowing with overrides, zero boilerplate, seamless Optuna integration. The Python HPO/NAS library that should have existed from day one, for ML researchers exploring complex hyperparameter spaces."
+description: "Announcing SpaX, a Python library that helps you define type-checked, conditional search spaces, visualize and refine them over time—without rewriting your code between experiments."
 images:
   - /images/spax-og.png
 keywords: 
@@ -30,7 +30,7 @@ keywords:
   - open source ML tools
 author: "Keyhan Kamyar"
 canonicalURL: "https://keyhankamyar.github.io/posts/spax-introduction/"
-summary: "Type-safe search space definition for ML. One-line Pydantic migration, conditional parameters, iterative refinement with overrides, seamless Optuna integration. The HPO/NAS library that should have existed from day one."
+summary: "Type-safe, declarative search spaces for real-world HPO. Define once, refine safely. Conditional, nested spaces with minimal syntax and clear semantics."
 ---
 
 Finding optimal parameters—hyperparameters, architecture choices, whatever—should be straightforward. It's not. Which libraries? What's the actual workflow? How do I search a massive space without wasting weeks of compute? By the time you figure it out, you've written hundreds of lines of boilerplate, debugged silent parameter conflicts, and discovered that "search everything at once" wastes compute and gets bad results.
@@ -102,8 +102,6 @@ def objective(trial):
 study.optimize(objective, n_trials=100)
 ```
 
-> 💡 **No DSL to learn.** If you know Pydantic and type hints, you already know SpaX. The spaces are just Python classes with clear semantics.
-
 This is just automatic inference from type hints and `Field()` constraints. But what about parameters that *depend on other parameters*? What about configs that need to encode your domain knowledge and best practices? That's where SpaX gets interesting.
 
 ---
@@ -147,57 +145,332 @@ class SimpleConditionalConfig(sp.Config):
 
 Your configs now enforce dependencies: you can't accidentally run a 12-layer model without checkpointing, or try to tune dropout when it's disabled. Invalid combinations simply don't exist.
 
-**Here's what you can build with this:**
+---
+
+### A more complete example: before vs after
+
+> **Heads-up:** The next block is intentionally verbose to mirror real-world wiring. If you want the clean version, skip to [“After: SpaX.”](#after-spax)
+
+#### Before: Pydantic + Optuna (manual wiring, fragile)
+
 ```python
-class SmartTrainingConfig(sp.Config):
-    num_encoder_layers: int = sp.Int(ge=4, le=32)
-    batch_size: int = sp.Int(ge=8, le=128)
-    
-    optimizer: str = sp.Categorical([
-        sp.Choice("adam", weight=3.0),
-        sp.Choice("sgd", weight=1.0),
-        sp.Choice("rmsprop", weight=1.0),
-    ])
-    
-    # Deep networks → gradient checkpointing
-    use_grad_checkpointing: bool = sp.Conditional(
-        sp.FieldCondition("num_encoder_layers", sp.LargerThan(8)),
+# Baseline: pure Pydantic config + manual Optuna suggestions
+# Nested + conditional + polymorphic (Dense vs Conv) handled by hand.
+
+from typing import Literal
+from pydantic import BaseModel, Field
+import optuna
+
+
+# --- Configs (validation only; no search-space semantics) --------------------
+
+class OptimizerConfig(BaseModel):
+    name: Literal["adam", "sgd"]
+    learning_rate: float = Field(ge=1e-5, le=1e-2)
+    # conditionals (must be enforced in code)
+    momentum: float | None = None   # only for SGD
+    beta2: float | None = None      # only for Adam
+
+
+class DenseConfig(BaseModel):
+    num_layers: int = Field(ge=2, le=12)
+    activation: Literal["silu", "mish", "relu", "gelu"]
+    norm_input: bool
+    use_dropout: bool
+    dropout_rate: float | None = None  # only if use_dropout
+
+
+class ConvConfig(BaseModel):
+    num_layers: int = Field(ge=2, le=12)
+    activation: Literal["silu", "mish", "relu", "gelu"]
+    kernel_size: int = Field(ge=1, le=64)
+    norm_input: bool
+    use_dropout: bool
+    dropout_rate: float | None = None  # only if use_dropout
+
+
+class ModelConfig(BaseModel):
+    # Polymorphic choice: DenseConfig OR ConvConfig (Pydantic won't choose for you)
+    block_type: Literal["dense", "conv"]
+    dense: DenseConfig | None = None
+    conv: ConvConfig | None = None
+    num_blocks: int = Field(ge=2, le=12)
+    # rule lives outside the model; you must remember to enforce it later
+    # use_checkpoint: bool
+
+
+class TrainingConfig(BaseModel):
+    model: ModelConfig
+    optimizer: OptimizerConfig
+    batch_size: int = Field(ge=16, le=128)
+
+
+# --- Objective with hand-rolled suggest_* logic and wiring -------------------
+
+def objective(trial: optuna.Trial) -> float:
+    # Optimizer
+    opt_name = trial.suggest_categorical("optimizer.name", ["adam", "sgd"])
+    lr = trial.suggest_float("optimizer.learning_rate", 1e-5, 1e-2, log=True)
+
+    if opt_name == "sgd":
+        momentum = trial.suggest_float("optimizer.momentum", 0.0, 0.99)
+        beta2 = None
+    else:
+        beta2 = trial.suggest_float("optimizer.beta2", 0.9, 0.999)
+        momentum = None
+
+    # Polymorphic block choice
+    block_type = trial.suggest_categorical("model.block_type", ["dense", "conv"])
+
+    if block_type == "dense":
+        num_layers = trial.suggest_int("model.dense.num_layers", 2, 12)
+        activation = trial.suggest_categorical(
+            "model.dense.activation", ["silu", "mish", "relu", "gelu"]
+        )
+        norm_input = trial.suggest_categorical("model.dense.norm_input", [True, False])
+        use_dropout = trial.suggest_categorical("model.dense.use_dropout", [True, False])
+        dropout_rate = (
+            trial.suggest_float("model.dense.dropout_rate", 0.05, 0.5)
+            if use_dropout else None
+        )
+        dense = DenseConfig(
+            num_layers=num_layers,
+            activation=activation,
+            norm_input=norm_input,
+            use_dropout=use_dropout,
+            dropout_rate=dropout_rate,
+        )
+        conv = None
+    else:
+        num_layers = trial.suggest_int("model.conv.num_layers", 2, 12)
+        activation = trial.suggest_categorical(
+            "model.conv.activation", ["silu", "mish", "relu", "gelu"]
+        )
+        kernel_size = trial.suggest_int("model.conv.kernel_size", 1, 64)
+        norm_input = trial.suggest_categorical("model.conv.norm_input", [True, False])
+        use_dropout = trial.suggest_categorical("model.conv.use_dropout", [True, False])
+        dropout_rate = (
+            trial.suggest_float("model.conv.dropout_rate", 0.05, 0.5)
+            if use_dropout else None
+        )
+        conv = ConvConfig(
+            num_layers=num_layers,
+            activation=activation,
+            kernel_size=kernel_size,
+            norm_input=norm_input,
+            use_dropout=use_dropout,
+            dropout_rate=dropout_rate,
+        )
+        dense = None
+
+    num_blocks = trial.suggest_int("model.num_blocks", 2, 12)
+    batch_size = trial.suggest_int("batch_size", 16, 128)
+
+    config = TrainingConfig(
+        model=ModelConfig(
+            block_type=block_type, dense=dense, conv=conv, num_blocks=num_blocks
+        ),
+        optimizer=OptimizerConfig(
+            name=opt_name, learning_rate=lr, momentum=momentum, beta2=beta2
+        ),
+        batch_size=batch_size,
+    )
+
+    # Hidden rule: enable checkpointing for deep models (easy to forget/duplicate)
+    use_checkpoint = num_blocks > 8
+
+    return train_and_evaluate(config, use_checkpoint=use_checkpoint)
+```
+
+**Where this bites you:**
+
+* **Naming fragility:** `model.dense.dropout_rate` vs `model.conv.dropout_rate`. Typos silently create *new* parameters; later analysis breaks.
+* **Conditional drift:** You must reset inactive fields (`momentum=None` when not SGD, `dropout_rate=None` when no dropout). Easy to forget in either direction.
+* **Dead branches & wasted compute:** If you forget the `if use_dropout:` guard or misname it, Optuna happily “tunes” a parameter that doesn’t matter.
+* **Rules hidden in code:** `use_checkpoint = num_blocks > 8` lives outside the model; it’s not validated or visible in a canonical space view.
+* **No canonical space description:** There’s no ground-truth tree of “what is tunable under which conditions?”
+* **Polymorphism boilerplate:** You manually branch Dense vs Conv, duplicate naming, and keep both schemas in sync.
+* **Polymorphic deserialization ambiguity (Pydantic):** Union-like fields (`DenseCfg | ConvCfg`) don’t round-trip cleanly. When you load a saved config or trial params, Pydantic can’t infer **which** variant a parameter belongs to unless you hand-roll a discriminator (`block_type`) and ensure only one sub-config is non-null. It’s easy to mis-reconstruct past runs.
+* **Cross-branch name collisions & accidental coupling:** It’s tempting to reuse the same key for different branches (e.g., `dropout_rate` or `num_layers`). But they are **not the same space**—a Dense block might prefer deeper nets than a Conv block (or vice versa), and ranges/semantics differ. Reusing names (or forgetting the branch prefix) couples unrelated spaces, corrupts analysis, and can lead the optimizer to mix signals across architectures.
+
+---
+
+<a id="after-spax"></a>
+#### After: SpaX (declarative, conditional, polymorphic, canonical)
+
+```python
+from typing import Literal
+
+import optuna
+from pydantic import Field
+
+import spax as sp
+
+
+class OptimizerConfig(sp.Config):
+    name: Literal["adam", "sgd"]
+    learning_rate: float = sp.Float(ge=1e-5, le=1e-2, distribution="log")
+
+    momentum: float | None = sp.Conditional(
+        sp.FieldCondition("name", sp.EqualsTo("sgd")),
+        true=sp.Float(ge=0.0, le=0.99),
+        false=None,  # only for SGD
+    )
+
+    beta2: float | None = sp.Conditional(
+        sp.FieldCondition("name", sp.EqualsTo("adam")),
+        true=sp.Float(ge=0.9, le=0.999),
+        false=None,  # only for Adam
+    )
+
+
+class DenseConfig(sp.Config):
+    num_layers: int = Field(ge=2, le=12)
+    activation: Literal["silu", "mish", "relu", "gelu"]
+    norm_input: bool
+    use_dropout: bool
+
+    dropout_rate: float | None = sp.Conditional(
+        sp.FieldCondition("use_dropout", sp.EqualsTo(True)),
+        true=sp.Float(ge=0.05, le=0.5),  # only if use_dropout
+        false=None,
+    )
+
+
+class ConvConfig(sp.Config):
+    num_layers: int = Field(ge=2, le=12)
+    activation: Literal["silu", "mish", "relu", "gelu"]
+    kernel_size: int = Field(ge=1, le=64)
+    norm_input: bool
+    use_dropout: bool
+
+    dropout_rate: float | None = sp.Conditional(
+        sp.FieldCondition("use_dropout", sp.EqualsTo(True)),
+        true=sp.Float(ge=0.05, le=0.5),  # only if use_dropout
+        false=None,
+    )
+
+
+class ModelConfig(sp.Config):
+    # Polymorphic field: either DenseConfig or ConvConfig.
+    # This automatically becomes sp.Categorical([DenseConfig, ConvConfig])
+    # SpaX handles type tagging automatically for (de)serialization.
+    block_config: DenseConfig | ConvConfig
+    num_blocks: int = Field(ge=2, le=12)
+
+    # Rule is part of the config, not hidden in training code
+    use_checkpoint: bool = sp.Conditional(
+        sp.FieldCondition("num_blocks", sp.LargerThan(8)),
         true=True,
         false=False,
     )
-    
-    # Small batches → gradient accumulation
-    accumulation_steps: int = sp.Conditional(
-        sp.FieldCondition("batch_size", sp.SmallerThan(32, or_equals=True)),
-        true=sp.Int(ge=2, le=8),
-        false=1,
-    )
-    
-    # Large encoders → smaller heads to balance compute
-    num_head_layers: int = sp.Conditional(
-        sp.FieldCondition("num_encoder_layers", sp.LargerThan(16)),
-        true=sp.Int(ge=1, le=3),
-        false=sp.Int(ge=2, le=8),
-    )
 
-print(SmartTrainingConfig.get_tree())
-# SmartTrainingConfig
-# ├─ num_encoder_layers: Int([4, 32], uniform)
-# ├─ batch_size: Int([8, 128], uniform)
-# ├─ optimizer: Categorical
-# │  ├─ 'adam' (weight: 3.0)
-# │  ├─ 'sgd'
-# │  └─ 'rmsprop'
-# ├─ use_grad_checkpointing: Conditional (if num_encoder_layers > 8)
-# │  ├─ true: True
-# │  └─ false: False
-# ├─ accumulation_steps: Conditional (if batch_size <= 32)
-# │  ├─ true: Int([2, 8], uniform)
-# │  └─ false: 1
-# └─ num_head_layers: Conditional (if num_encoder_layers > 16)
-#    ├─ true: Int([1, 3], uniform)
-#    └─ false: Int([2, 8], uniform)
+
+class TrainingConfig(sp.Config):
+    model: ModelConfig
+    optimizer: OptimizerConfig
+    batch_size: int = Field(ge=16, le=128)
+
+
+def objective(trial: optuna.Trial) -> float:
+    # One line: validated, conditional, nested sampling
+    return train_and_evaluate(TrainingConfig.from_trial(trial))
 ```
+
+##### Canonical view of the space:
+```python
+print(TrainingConfig.get_tree())
+```
+<details><summary>Click to expand/collapse</summary>
+
+```text
+TrainingConfig
+├─ model: ModelConfig
+│  ├─ block_config: Categorical
+│  │  ├─ DenseConfig
+│  │  │  ├─ num_layers: Int([2, 12], uniform)
+│  │  │  ├─ activation: Categorical
+│  │  │  │  ├─ 'silu'
+│  │  │  │  ├─ 'mish'
+│  │  │  │  ├─ 'relu'
+│  │  │  │  └─ 'gelu'
+│  │  │  ├─ norm_input: Categorical
+│  │  │  │  ├─ True
+│  │  │  │  └─ False
+│  │  │  ├─ use_dropout: Categorical
+│  │  │  │  ├─ True
+│  │  │  │  └─ False
+│  │  │  └─ dropout_rate: Conditional (if use_dropout == True)
+│  │  │     ├─ true: Float([0.05, 0.5], uniform)
+│  │  │     └─ false: None
+│  │  └─ ConvConfig
+│  │     ├─ num_layers: Int([2, 12], uniform)
+│  │     ├─ activation: Categorical
+│  │     │  ├─ 'silu'
+│  │     │  ├─ 'mish'
+│  │     │  ├─ 'relu'
+│  │     │  └─ 'gelu'
+│  │     ├─ kernel_size: Int([1, 64], uniform)
+│  │     ├─ norm_input: Categorical
+│  │     │  ├─ True
+│  │     │  └─ False
+│  │     ├─ use_dropout: Categorical
+│  │     │  ├─ True
+│  │     │  └─ False
+│  │     └─ dropout_rate: Conditional (if use_dropout == True)
+│  │        ├─ true: Float([0.05, 0.5], uniform)
+│  │        └─ false: None
+│  ├─ num_blocks: Int([2, 12], uniform)
+│  └─ use_checkpoint: Conditional (if num_blocks > 8)
+│     ├─ true: True
+│     └─ false: False
+├─ optimizer: OptimizerConfig
+│  ├─ name: Categorical
+│  │  ├─ 'adam'
+│  │  └─ 'sgd'
+│  ├─ learning_rate: Float([1e-05, 0.01], log)
+│  ├─ momentum: Conditional (if name == 'sgd')
+│  │  ├─ true: Float([0.0, 0.99], uniform)
+│  │  └─ false: None
+│  └─ beta2: Conditional (if name == 'adam')
+│     ├─ true: Float([0.9, 0.999], uniform)
+│     └─ false: None
+└─ batch_size: Int([16, 128], uniform)
+```
+</details>
+
+##### Hierarchical parameter names:
+
+```python
+print(TrainingConfig.get_parameter_names())
+```
+<details><summary>Click to expand/collapse</summary>
+
+```text
+[
+    "TrainingConfig.model::ModelConfig.block_config",
+    "TrainingConfig.model::ModelConfig.block_config::DenseConfig.activation",
+    "TrainingConfig.model::ModelConfig.block_config::DenseConfig.norm_input",
+    "TrainingConfig.model::ModelConfig.block_config::DenseConfig.num_layers",
+    "TrainingConfig.model::ModelConfig.block_config::DenseConfig.use_dropout",
+    "TrainingConfig.model::ModelConfig.block_config::DenseConfig.dropout_rate::true_branch",
+    "TrainingConfig.model::ModelConfig.block_config::ConvConfig.activation",
+    "TrainingConfig.model::ModelConfig.block_config::ConvConfig.kernel_size",
+    "TrainingConfig.model::ModelConfig.block_config::ConvConfig.norm_input",
+    "TrainingConfig.model::ModelConfig.block_config::ConvConfig.num_layers",
+    "TrainingConfig.model::ModelConfig.block_config::ConvConfig.use_dropout",
+    "TrainingConfig.model::ModelConfig.block_config::ConvConfig.dropout_rate::true_branch",
+    "TrainingConfig.model::ModelConfig.num_blocks",
+    "TrainingConfig.optimizer::OptimizerConfig.learning_rate",
+    "TrainingConfig.optimizer::OptimizerConfig.name",
+    "TrainingConfig.optimizer::OptimizerConfig.beta2::true_branch",
+    "TrainingConfig.optimizer::OptimizerConfig.momentum::true_branch",
+    "TrainingConfig.batch_size",
+]
+```
+</details>
+
+<div aria-hidden="true" style="height: 1.25rem;"></div>
 
 > 🔒 **Invalid configurations don't exist.** SpaX validates dependencies at definition time. You can't build a config that violates your constraints—and neither can your HPO library.
 
